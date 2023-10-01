@@ -1,5 +1,5 @@
 # golang-boilerplate-api
-package main
+// package main
 import ("fmt")
 
 func myFunction(fullName string) {
