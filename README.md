@@ -7,7 +7,7 @@
     }
 
     func main() {
-        // This is a comment
+        ## This is a comment
         fmt.Println("Hello, World!");
 
         // Variables
