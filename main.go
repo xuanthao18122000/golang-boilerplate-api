@@ -1,119 +1,83 @@
 package main
 
 import (
-	"fmt"
-	"golang-boilerplate-api/models"
+	controller "golang-boilerplate-api/controllers"
+	_ "golang-boilerplate-api/docs"
+	models "golang-boilerplate-api/models"
+	repository "golang-boilerplate-api/repositories"
+	routers "golang-boilerplate-api/routers"
+	service "golang-boilerplate-api/services"
 	"golang-boilerplate-api/storage"
 	"log"
 	"net/http"
 	"os"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/go-playground/validator/v10"
+
 	"github.com/joho/godotenv"
-	"gorm.io/gorm"
 )
 
-type Post struct {
-	Name   string `json:"name"`
-	Status string `json:"status"`
+type MinIOConfig struct {
+	Endpoint   string
+	AccessKey  string
+	SecretKey  string
+	Bucket     string
+	SecureMode bool
 }
 
-type Repository struct {
-	DB *gorm.DB
-}
-
-func (r *Repository) GetListPost(context *fiber.Ctx) error {
-	postModels := &[]models.Posts{}
-
-	err := r.DB.Find(postModels).Error
-	if err != nil {
-		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
-			"message": "Could not get posts!",
-		})
+func loadMinIOConfig() MinIOConfig {
+	return MinIOConfig{
+		Endpoint:   os.Getenv("MINIO_ENDPOINT"),
+		AccessKey:  os.Getenv("MINIO_ACCESS_KEY"),
+		SecretKey:  os.Getenv("MINIO_SECRET_KEY"),
+		Bucket:     os.Getenv("MINIO_BUCKET"),
+		SecureMode: false, // Đặt giá trị này là true nếu bạn sử dụng HTTPS
 	}
-
-	context.Status(http.StatusOK).JSON(&fiber.Map{
-		"message": "Get list posts successful!",
-		"data":    postModels,
-	})
-	return nil
 }
 
-func (r *Repository) GetPostByID(context *fiber.Ctx) error {
-	id := context.Params("id")
-	postModels := &models.Posts{}
-	if id == "" {
-		context.Status(http.StatusInternalServerError).JSON(&fiber.Map{
-			"message": "id cannot be empty",
-		})
-		return nil
-	}
+// func (r *Repository) UploadFile(c *fiber.Ctx) error {
+// 	minioConfig := loadMinIOConfig()
 
-	fmt.Println("the ID is", id)
+// 	// Khởi tạo client MinIO
+// 	minioClient, err := minio.New(minioConfig.Endpoint, &minio.Options{
+// 		Creds:  credentials.NewStaticV4(minioConfig.AccessKey, minioConfig.SecretKey, ""),
+// 		Secure: false, // Nếu sử dụng HTTPS, đặt giá trị này là true
+// 	})
 
-	err := r.DB.Where("id = ?", id).First(postModels).Error
-	if err != nil {
-		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
-			"message": "ID Post Not Found!",
-		})
-		return err
-	}
-	context.Status(http.StatusOK).JSON(&fiber.Map{
-		"message": "Get post by ID successful!",
-		"data":    postModels,
-	})
-	return nil
-}
+// 	file, err := c.FormFile("file")
+// 	if err != nil {
+// 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+// 			"message": "File upload failed",
+// 		})
+// 	}
 
-func (r *Repository) CreatePost(context *fiber.Ctx) error {
-	post := Post{}
+// 	// Đọc dữ liệu từ tệp hình ảnh
+// 	fileBytes, err := file.Open()
+// 	if err != nil {
+// 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+// 			"message": "File read failed",
+// 		})
+// 	}
+// 	defer fileBytes.Close()
 
-	err := context.BodyParser(&post)
-	if err != nil {
-		context.Status(http.StatusUnprocessableEntity).JSON(&fiber.Map{
-			"message": "request failed",
-		})
-	}
+// 	// Tạo tên tệp duy nhất
+// 	objectName := fmt.Sprintf("%s/%s", minioConfig.Bucket, file.Filename)
 
-	err = r.DB.Create(&post).Error
-	if err != nil {
-		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
-			"message": "Can not create Post!",
-		})
-	}
+// 	// Tải lên tệp hình ảnh lên MinIO
+// 	_, err = minioClient.PutObject(c.Context(), minioConfig.Bucket, objectName, fileBytes, file.Size, minio.PutObjectOptions{
+// 		ContentType: file.Header.Get("Content-Type"),
+// 	})
 
-	context.Status(http.StatusOK).JSON(&fiber.Map{"message": "Create Post sucessful!"})
-	return nil
-}
+// 	if err != nil {
+// 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+// 			"message": "File upload to MinIO failed",
+// 		})
+// 	}
 
-func (r *Repository) UpdatePost(context *fiber.Ctx) error {
-	return nil
-}
-
-func (r *Repository) DeletePost(context *fiber.Ctx) error {
-	id := context.Params("id")
-	postModels := models.Posts
-	
-	return nil
-}
-
-func (r *Repository) SetupRoutes(app *fiber.App) {
-	api := app.Group("/api")
-
-	bookAPI := api.Group("/posts")
-	bookAPI.Get("/", r.GetListPost)
-	bookAPI.Get("/:id", r.GetPostByID)
-	bookAPI.Post("/", r.CreatePost)
-	bookAPI.Put("/", r.UpdatePost)
-	bookAPI.Delete("/", r.DeletePost)
-
-	userAPI := api.Group("/user")
-	userAPI.Get("/", r.GetListPost)
-	userAPI.Get("/:id", r.GetPostByID)
-	userAPI.Post("/", r.CreatePost)
-	userAPI.Put("/", r.UpdatePost)
-	userAPI.Delete("/", r.DeletePost)
-}
+// 	return c.Status(http.StatusOK).JSON(fiber.Map{
+// 		"message": "File uploaded successfully",
+// 	})
+// }
 
 func main() {
 	err := godotenv.Load(".env")
@@ -140,12 +104,27 @@ func main() {
 	if err != nil {
 		log.Fatal("Migrate database failed: ", err, db)
 	}
+	validate := validator.New()
 
-	r := Repository{
-		DB: db,
+	//Repository
+	postsRepository := repository.NewPostsREpositoryImpl(db)
+
+	// Service
+	postsService := service.NewPostServiceImpl(postsRepository, validate)
+
+	// Controller
+	postsController := controller.NewPostsController(postsService)
+
+	routes := routers.NewRouter(postsController)
+
+	server := &http.Server{
+		Addr:    ":3000",
+		Handler: routes,
 	}
 
-	app := fiber.New()
-	r.SetupRoutes(app)
-	app.Listen(":3000")
+	err = server.ListenAndServe()
+	if err != nil {
+		// Xử lý lỗi ở đây
+		log.Fatalf("Server error: %v", err)
+	}
 }

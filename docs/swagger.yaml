@@ -1,0 +1,113 @@
+basePath: /api
+definitions:
+  request.CreatePostsRequest:
+    properties:
+      name:
+        maxLength: 200
+        minLength: 1
+        type: string
+    required:
+    - name
+    type: object
+  response.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      status:
+        type: string
+    type: object
+host: localhost:3000
+info:
+  contact: {}
+  description: A Post service API in Go using Gin framework
+  title: Post Service API
+  version: "1.0"
+paths:
+  /posts:
+    get:
+      description: Return list of posts.
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: obejct
+      summary: Get All posts.
+      posts:
+      - posts
+    post:
+      description: Save posts data in Db.
+      parameters:
+      - description: Create posts
+        in: body
+        name: posts
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreatePostsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Create posts
+      posts:
+      - posts
+  /posts/{postID}:
+    delete:
+      description: Remove posts data by id.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Delete posts
+      posts:
+      - posts
+  /posts/{postId}:
+    get:
+      description: Return the tahs whoes postId valu mathes id.
+      parameters:
+      - description: update posts by id
+        in: path
+        name: postId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Get Single posts by id.
+      posts:
+      - posts
+    patch:
+      description: Update posts data.
+      parameters:
+      - description: update posts by id
+        in: path
+        name: postId
+        required: true
+        type: string
+      - description: Update posts
+        in: body
+        name: posts
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreatePostsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Update posts
+      posts:
+      - posts
+swagger: "2.0"
