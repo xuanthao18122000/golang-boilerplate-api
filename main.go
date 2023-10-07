@@ -91,6 +91,9 @@ func (r *Repository) UpdatePost(context *fiber.Ctx) error {
 }
 
 func (r *Repository) DeletePost(context *fiber.Ctx) error {
+	id := context.Params("id")
+	postModels := models.Posts
+	
 	return nil
 }
 
