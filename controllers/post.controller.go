@@ -1,9 +1,11 @@
 package controller
 
 import (
+	response "golang-boilerplate-api/data/response"
 	"golang-boilerplate-api/models"
 	service "golang-boilerplate-api/services"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -36,42 +38,49 @@ func (controller *PostsController) isIDEmpty(id string, c *gin.Context) bool {
 }
 
 func (controller *PostsController) GetListPost(c *gin.Context) {
-	postModels := &[]models.Posts{}
+	postsResponse := controller.postsService.FindAll()
 
-	err := controller.DB.Find(postModels).Error
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Could not get posts!",
-		})
-		return
+	webResponse := response.Response{
+		Code:   http.StatusOK,
+		Status: "OK",
+		Data:   postsResponse,
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Get list posts successful!",
-		"data":    postModels,
+	c.Header("Content-Type", "application/json")
+	c.JSON(http.StatusOK, webResponse)
+}
+
+func idNotFoundResponse(ctx *gin.Context) {
+	ctx.JSON(http.StatusNotFound, response.Response{
+		Code:   http.StatusNotFound,
+		Status: "ID Not Found",
+		Data:   nil,
 	})
 }
 
-func (controller *PostsController) GetPostByID(c *gin.Context) {
-	id := c.Param("id")
-	postModels := &models.Posts{}
-
-	if controller.isIDEmpty(id, c) {
-		return
-	}
-
-	err := controller.DB.Where("id = ?", id).First(postModels).Error
+func (controller *PostsController) GetPostByID(ctx *gin.Context) {
+	postId := ctx.Param("postId")
+	id, err := strconv.Atoi(postId)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Could Not Get The Post!",
-		})
+		idNotFoundResponse(ctx)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Get Post By ID Successful!",
-		"data":    postModels,
-	})
+	postResponse := controller.postsService.FindById(id)
+
+	if postResponse.Id == 0 {
+		idNotFoundResponse(ctx)
+		return
+	}
+
+	webResponse := response.Response{
+		Code:   http.StatusOK,
+		Status: "Ok",
+		Data:   postResponse,
+	}
+
+	ctx.Header("Content-Type", "application/json")
+	ctx.JSON(http.StatusOK, webResponse)
 }
 
 func (controller *PostsController) CreatePost(c *gin.Context) {

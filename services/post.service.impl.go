@@ -57,6 +57,11 @@ func (t *PostServiceImpl) FindAll() []response.PostsResponse {
 func (t *PostServiceImpl) FindById(postsId int) response.PostsResponse {
 	postData, err := t.PostsRepository.FindById(postsId)
 	helper.ErrorPanic(err)
+	if postData.Id == 0 {
+		return response.PostsResponse{
+			Id: int(postData.Id),
+		}
+	}
 
 	postResponse := response.PostsResponse{
 		Id:   int(postData.Id),
