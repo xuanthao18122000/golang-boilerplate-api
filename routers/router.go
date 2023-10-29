@@ -1,8 +1,8 @@
+// main_router.go
 package router
 
 import (
 	controller "golang-boilerplate-api/controllers"
-
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,21 +10,21 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func NewRouter(postsController *controller.PostsController) *gin.Engine {
+func NewRouter(postsController *controller.PostsController, authController *controller.AuthController) *gin.Engine {
 	router := gin.Default()
-	// add swagger
+
+	// Add Swagger documentation route
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	router.GET("", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, "Welcome home")
 	})
+
 	baseRouter := router.Group("/api")
-	postsRouter := baseRouter.Group("/posts")
-	postsRouter.GET("", postsController.GetListPost)
-	postsRouter.GET("/:postId", postsController.GetPostByID)
-	postsRouter.POST("", postsController.CreatePost)
-	postsRouter.PUT("/:postId", postsController.UpdatePost)
-	postsRouter.DELETE("/:postId", postsController.DeletePost)
+
+	// Import and set up the post routes
+	SetupPostRoutes(baseRouter, postsController)
+	SetupAuthRoutes(baseRouter, authController)
 
 	return router
 }

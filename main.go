@@ -111,11 +111,13 @@ func main() {
 
 	// Service
 	postsService := service.NewPostServiceImpl(postsRepository, validate)
+	authService := service.NewAuthServiceImpl(postsRepository, validate)
 
 	// Controller
 	postsController := controller.NewPostsController(postsService)
+	authController := controller.NewAuthController(authService)
 
-	routes := routers.NewRouter(postsController)
+	routes := routers.NewRouter(postsController, authController)
 
 	server := &http.Server{
 		Addr:    ":3000",
